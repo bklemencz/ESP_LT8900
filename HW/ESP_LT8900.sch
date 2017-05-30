@@ -50,21 +50,19 @@ U 1 1 58DBC25E
 P 8200 1850
 F 0 "U2" H 8450 2300 60  0000 C CNN
 F 1 "LT8900" H 8400 1400 60  0000 C CNN
-F 2 "BK_Common:LT8900_2.54mmPitch_20x20" H 8200 1200 60  0001 C CNN
+F 2 "BK_Common:LT8900_2.54mmPitch_SMD_20x20" H 8200 1200 60  0001 C CNN
 F 3 "http://www.datasheetspdf.com/datasheet/LT8900.html" H 8300 1100 60  0001 C CNN
 	1    8200 1850
 	1    0    0    -1  
 $EndComp
-Text Label 7400 1550 0    60   ~ 0
+Text Label 7300 1550 0    60   ~ 0
 MISO
-Text Label 7400 1700 0    60   ~ 0
+Text Label 7300 1700 0    60   ~ 0
 MOSI
-Text Label 7400 1850 0    60   ~ 0
+Text Label 7300 1850 0    60   ~ 0
 SCK
 Text Label 8850 1850 0    60   ~ 0
 PKT
-Text Label 7400 2000 0    60   ~ 0
-CSN
 $Comp
 L +3V3 #PWR01
 U 1 1 58DBC25F
@@ -1063,6 +1061,78 @@ F 1 "GND" H 3750 6350 50  0000 C CNN
 F 2 "" H 3750 6500 50  0000 C CNN
 F 3 "" H 3750 6500 50  0000 C CNN
 	1    3750 6500
+	1    0    0    -1  
+$EndComp
+$Comp
+L nRF24L01_12x18mm U6
+U 1 1 592D3842
+P 10250 1850
+F 0 "U6" H 10500 2300 60  0000 C CNN
+F 1 "nRF24L01_12x18mm" H 10700 1400 60  0000 C CNN
+F 2 "BK_Common:NRF24L01_12x18mm" H 10250 1200 60  0001 C CNN
+F 3 "http://yourduino.com/docs/nRF24L01-Modules-connection-diagram.pdf" H 10350 1100 60  0001 C CNN
+	1    10250 1850
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	9750 1550 9400 1550
+Wire Wire Line
+	9750 1700 9400 1700
+Wire Wire Line
+	9750 1850 9400 1850
+Wire Wire Line
+	9750 2000 9400 2000
+Wire Wire Line
+	9250 2150 9750 2150
+Wire Wire Line
+	10750 1850 11050 1850
+Text Label 10800 1850 0    60   ~ 0
+PKT
+Text Label 9400 1550 0    60   ~ 0
+MISO
+Text Label 9400 1700 0    60   ~ 0
+MOSI
+Text Label 9400 1850 0    60   ~ 0
+SCK
+Text Label 9400 2000 0    60   ~ 0
+CSN
+$Comp
+L +3V3 #PWR036
+U 1 1 592D3E5C
+P 10250 1150
+F 0 "#PWR036" H 10250 1000 50  0001 C CNN
+F 1 "+3V3" H 10250 1290 50  0000 C CNN
+F 2 "" H 10250 1150 50  0000 C CNN
+F 3 "" H 10250 1150 50  0000 C CNN
+	1    10250 1150
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	10250 1150 10250 1250
+$Comp
+L GND #PWR037
+U 1 1 592D3F84
+P 10250 2550
+F 0 "#PWR037" H 10250 2300 50  0001 C CNN
+F 1 "GND" H 10250 2400 50  0000 C CNN
+F 2 "" H 10250 2550 50  0000 C CNN
+F 3 "" H 10250 2550 50  0000 C CNN
+	1    10250 2550
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	10250 2450 10250 2550
+Text Label 7300 2000 0    60   ~ 0
+CSN
+$Comp
+L +3V3 #PWR038
+U 1 1 592D8EB1
+P 9250 2150
+F 0 "#PWR038" H 9250 2000 50  0001 C CNN
+F 1 "+3V3" H 9250 2290 50  0000 C CNN
+F 2 "" H 9250 2150 50  0000 C CNN
+F 3 "" H 9250 2150 50  0000 C CNN
+	1    9250 2150
 	1    0    0    -1  
 $EndComp
 $EndSCHEMATC

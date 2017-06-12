@@ -26,9 +26,9 @@
 #include <FS.h>
 
 
-const uint8_t PIN_NRF_RST = D9;
+const uint8_t PIN_NRF_RST = D8;
 const uint8_t PIN_NRF_CS = D10;
-const uint8_t PIN_NRF_PKT = D2;
+const uint8_t PIN_NRF_PKT = D9;
 
 
 bool rem_key_hold;

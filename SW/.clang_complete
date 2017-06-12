@@ -2,12 +2,12 @@
 -IC:\Users\Balazs\.platformio\packages\framework-arduinoespressif8266\tools\sdk\lwip\include
 -IC:\Users\Balazs\.platformio\packages\framework-arduinoespressif8266\cores\esp8266
 -IC:\Users\Balazs\.platformio\packages\framework-arduinoespressif8266\variants\d1
--IC:\Users\Balazs\.platformio\lib\PubSubClient_ID89\src
--IC:\Users\Balazs\.platformio\packages\framework-arduinoespressif8266\libraries\SPI
 -IC:\Users\Balazs\.platformio\packages\framework-arduinoespressif8266\libraries\ESP8266WiFi\src
+-IC:\Users\Balazs\.platformio\packages\framework-arduinoespressif8266\libraries\SPI
 -IC:\Users\Balazs\.platformio\packages\framework-arduinoespressif8266\libraries\EEPROM
+-IC:\Users\Balazs\.platformio\lib\PubSubClient_ID89\src
 -IC:\Users\Balazs\.platformio\packages\framework-arduinoespressif8266\libraries\ESP8266mDNS
--IC:\Users\Balazs\Documents\Arduino\PlatformIO\LT8900-ESP\src
+-IE:\Project\KiCad\ESP_LT8900\SW\src
 -IC:\Users\Balazs\.platformio\lib\ESP8266-OLED Display Library_ID1487
 -IC:\Users\Balazs\.platformio\lib\PCA9685_ID1357
 -IC:\Users\Balazs\.platformio\lib\PubSubClient_ID89\src
@@ -41,6 +41,7 @@
 -IC:\Users\Balazs\.platformio\packages\toolchain-xtensa\xtensa-lx106-elf\include
 -IC:\Users\Balazs\.platformio\packages\toolchain-xtensa\lib\gcc\xtensa-lx106-elf\4.8.2\include
 -IC:\Users\Balazs\.platformio\packages\toolchain-xtensa\lib\gcc\xtensa-lx106-elf\4.8.2\include-fixed
+-IC:\Users\Balazs\.platformio\packages\tool-unity
 -DARDUINO=20300
 -DLWIP_OPEN_SRC
 -DF_CPU=80000000L

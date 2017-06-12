@@ -6,52 +6,21 @@
  version 2 as published by the Free Software Foundation.
  */
 
+ /*
+ 6/12/2017 Update BK
+ RST and PKT pins can be set to 0
+ When PKT set to 0 available() is polling Register 48 PKT_FLAG,
+ same for SendPacket() routine.
+ Moved #definitions to the include file.
+ */
+
 #include <SPI.h>
 #include "LT8900.h"
 
-#define REGISTER_READ       0b10000000  //bin
-#define REGISTER_WRITE      0b00000000  //bin
-#define REGISTER_MASK       0b01111111  //bin
-
-#define R_CHANNEL           7
-#define CHANNEL_RX_BIT      7
-#define CHANNEL_TX_BIT      8
-#define CHANNEL_MASK        0b01111111  ///bin
-#define DEFAULT_CHANNEL     0x30
-
-#define R_CURRENT           9
-#define CURRENT_POWER_SHIFT 12
-#define CURRENT_POWER_MASK  0b1111000000000000
-#define CURRENT_GAIN_SHIFT  7
-#define CURRENT_GAIN_MASK   0b0000011110000000
-
-/* LT8910S only */
-#define R_DATARATE          44
-#define DATARATE_MASK       0x00FF
-#define DATARATE_1MBPS      0x0100
-#define DATARATE_250KBPS    0x0400
-#define DATARATE_125KBPS    0x0800
-#define DATARATE_62KBPS     0x1000
-
-#define R_SYNCWORD1         36
-#define R_SYNCWORD2         37
-#define R_SYNCWORD3         38
-#define R_SYNCWORD4         39
-
-#define R_PACKETCONFIG      41
-#define PACKETCONFIG_CRC_ON             0x8000
-#define PACKETCONFIG_SCRAMBLE_ON        0x4000
-#define PACKETCONFIG_PACK_LEN_ENABLE    0x2000
-#define PACKETCONFIG_FW_TERM_TX         0x1000
-#define PACKETCONFIG_AUTO_ACK           0x0800
-#define PACKETCONFIG_PKT_FIFO_POLARITY  0x0400
-
-#define R_STATUS            48
-#define STATUS_CRC_BIT      15
 
 
-#define R_FIFO              50
-#define R_FIFO_CONTROL      52
+// if RST pin not used set to 0
+// if PKT pin not used set to 0
 
 LT8900::LT8900(const uint8_t cs, const uint8_t pkt, const uint8_t rst)
 {
@@ -62,14 +31,16 @@ LT8900::LT8900(const uint8_t cs, const uint8_t pkt, const uint8_t rst)
   _isLT8910 = false;
 
   pinMode(_pin_chipselect, OUTPUT);
-  pinMode(_pin_pktflag, INPUT);
-  pinMode(_pin_reset, OUTPUT);
+  // Added checks if pins disabled.
+  if (_pin_pktflag>0) pinMode(_pin_pktflag, INPUT);
+  if (_pin_reset >0) pinMode(_pin_reset, OUTPUT);
 
   digitalWrite(_pin_chipselect, HIGH);
 }
 
 void LT8900::begin()
 {
+    // Added check if PIN is enabled
     if(_pin_reset > 0)
     {
         digitalWrite(_pin_reset, LOW);
@@ -297,9 +268,13 @@ bool LT8900::available()
 {
   //read the PKT_FLAG state; this can also be done with a hard wire.
 
-  if (digitalRead(_pin_pktflag) != 0)
+  if ((_pin_pktflag>0) && (digitalRead(_pin_pktflag) != 0))
   {
     return true;
+  } else
+  if ((_pin_pktflag==0) && (bitRead(readRegister(R_STATUS),PKT_FLAG)))
+  {
+      return true;
   }
 
   return false;
@@ -341,7 +316,7 @@ int LT8900::read(uint8_t *buffer, size_t maxBuffer)
 void LT8900::startListening()
 {
 
-  pinMode(_pin_pktflag, INPUT);
+  if (_pin_pktflag >0) pinMode(_pin_pktflag, INPUT);
   writeRegister(R_CHANNEL, _channel & CHANNEL_MASK);   //turn off rx/tx
   delay(3);
   writeRegister(R_FIFO_CONTROL, 0x0080);  //flush rx
@@ -386,11 +361,19 @@ bool LT8900::sendPacket(uint8_t *data, size_t packetSize)
   writeRegister(R_CHANNEL,  (_channel & CHANNEL_MASK) | _BV(CHANNEL_TX_BIT));   //enable RX
 
   //Wait until the packet is sent.
-  while (digitalRead(_pin_pktflag) == 0)
+  if (_pin_pktflag > 0)
   {
-      //do nothing.
-  }
+    while (digitalRead(_pin_pktflag) == 0)
+    {
+        //do nothing.
+    }
+  } else
+  {
+    while (bitRead(readRegister(R_STATUS),PKT_FLAG)==0)
+    {
 
+    }
+  }
   return true;
 }
 
@@ -433,8 +416,18 @@ void LT8900::scanRSSI(uint16_t *buffer, uint8_t start_channel, uint8_t num_chann
     writeRegister(43, (readRegister(43) & 0b0000000011111111) | ((start_channel & 0b1111111) << 8));
     writeRegister(43, (readRegister(43) & 0b0111111111111111) | _BV(15));
 
-    while(digitalRead(_pin_pktflag) == 0)
+    if (_pin_pktflag > 0)
     {
+      while (digitalRead(_pin_pktflag) == 0)
+      {
+          //do nothing.
+      }
+    } else
+    {
+      while (bitRead(readRegister(R_STATUS),PKT_FLAG)==0)
+      {
+
+      }
     }
 
 

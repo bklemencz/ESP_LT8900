@@ -25,10 +25,10 @@
 #include <EEPROM.h>
 #include <FS.h>
 
-
-const uint8_t PIN_NRF_RST = D8;
+// Using LT8900 without RST and PKT pins
+const uint8_t PIN_NRF_RST = 0;
 const uint8_t PIN_NRF_CS = D10;
-const uint8_t PIN_NRF_PKT = D9;
+const uint8_t PIN_NRF_PKT = 0;
 
 
 bool rem_key_hold;
@@ -36,7 +36,7 @@ uint8_t rem_group_act;
 int lastCounter;
 uint16_t RemContr_Add;
 uint8_t LearnCnt;
-String ssid,password,mqtt_server;
+String ssid,password,mqtt_server,host_name;
 
 LT8900 lt(PIN_NRF_CS, PIN_NRF_PKT, PIN_NRF_RST);
 
@@ -72,7 +72,7 @@ void setup_FS(void)
 {
   bool ok = SPIFFS.begin();
   if (ok) {
-    Serial.println("ok");
+    Serial.println("FS Opening: OK");
   }
   File f = SPIFFS.open("/wconf.txt", "r");
   if (!f) {
@@ -81,9 +81,12 @@ void setup_FS(void)
   ssid = f.readStringUntil('\n');
   password = f.readStringUntil('\n');
   mqtt_server = f.readStringUntil('\n');
+  host_name = f.readStringUntil('\n');
   ssid.remove((ssid.length()-1));
   password.remove((password.length()-1));
   mqtt_server.remove((mqtt_server.length()-1));
+  host_name.remove((host_name.length()-1));
+
   /////////// NEED TO RUN ONLY ONCE ///////////
   //  Serial.println("Spiffs formating...");
   //  SPIFFS.format();
@@ -103,7 +106,7 @@ void setup_wifi()
   WiFi.softAPdisconnect(true);
   WiFi.disconnect();
   WiFi.mode(WIFI_STA);
-  WiFi.hostname("Milight_Gateway_1");
+  WiFi.hostname(host_name);
   WiFi.begin(ssid.c_str(), password.c_str());
   while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("Connecting to: "); Serial.println(ssid.c_str());}
   FlashLed(3, 200);
@@ -144,7 +147,7 @@ void setup_OTA()
       else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
       else if (error == OTA_END_ERROR) Serial.println("End Failed");
     });
-    ArduinoOTA.setHostname("MiLight_Gateway");
+    ArduinoOTA.setHostname(host_name.c_str());
     ArduinoOTA.begin();
     Serial.println("Ready");
     Serial.print("IP address: ");
@@ -166,7 +169,7 @@ void setup_Lt8900()
   lt.setDataRate(LT8900::LT8900_1MBPS);
   lt.setChannel(0x04);
   lt.startListening();
-  lt.whatsUp(Serial);
+  //lt.whatsUp(Serial);
 }
 
 void EEprom_Write2Bytes(int Address,uint16_t Data)
@@ -189,13 +192,13 @@ void ParseRemoteComm(uint8_t buf[])
   {
     lastCounter = buf[5];
     LastRemAdd = buf[1] * 256 + buf[2];
-    if (buf[4] == 0x15)
-    {                                            // Remote Address Learning Mode
+    if (buf[4] == 0x15 && (millis() < 90000))               // Enable Remote learning for 90s after start
+    {                                                       // Remote Address Learning Mode
       LearnCnt++;
       if(LearnCnt >= 20)
-      {                                                // If keep pressed for 5 Sec
+      {                                                     // If keep pressed for 5 Sec
         RemContr_Add = buf[1] * 256 + buf[2];
-        EEprom_Write2Bytes(0,RemContr_Add);           // Save Remote Address to EEprom at adr0
+        EEprom_Write2Bytes(0,RemContr_Add);                 // Save Remote Address to EEprom at adr0
         Serial.print("New Remote Learned Adress: ");
         Serial.println(RemContr_Add);
         Flash_Light(5, 300);
@@ -594,11 +597,12 @@ void loop()
 {
    while (!client.connected())
    {
-     if (client.connect("ESP8266Client"))
+     if (client.connect(host_name.c_str()))
      {
        FlashLed(5, 100);
        Serial.println("MQTT Online!");
-       client.publish("Remote/Online","1");
+       String Out_Topic = host_name + "/Remote/Online";
+       client.publish(Out_Topic.c_str(),"1");
        lt.begin();
        lt.setChannel(4);
        lt.startListening();

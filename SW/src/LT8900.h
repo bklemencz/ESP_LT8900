@@ -9,6 +9,54 @@
 #ifndef LT8900_H
 #define LT8900_H
 
+#define REGISTER_READ       0b10000000  //bin
+#define REGISTER_WRITE      0b00000000  //bin
+#define REGISTER_MASK       0b01111111  //bin
+
+#define R_CHANNEL           7
+#define CHANNEL_RX_BIT      7
+#define CHANNEL_TX_BIT      8
+#define CHANNEL_MASK        0b01111111  ///bin
+#define DEFAULT_CHANNEL     0x30
+
+#define R_CURRENT           9
+#define CURRENT_POWER_SHIFT 12
+#define CURRENT_POWER_MASK  0b1111000000000000
+#define CURRENT_GAIN_SHIFT  7
+#define CURRENT_GAIN_MASK   0b0000011110000000
+
+/* LT8910S only */
+#define R_DATARATE          44
+#define DATARATE_MASK       0x00FF
+#define DATARATE_1MBPS      0x0100
+#define DATARATE_250KBPS    0x0400
+#define DATARATE_125KBPS    0x0800
+#define DATARATE_62KBPS     0x1000
+
+#define R_SYNCWORD1         36
+#define R_SYNCWORD2         37
+#define R_SYNCWORD3         38
+#define R_SYNCWORD4         39
+
+#define R_PACKETCONFIG      41
+#define PACKETCONFIG_CRC_ON             0x8000
+#define PACKETCONFIG_SCRAMBLE_ON        0x4000
+#define PACKETCONFIG_PACK_LEN_ENABLE    0x2000
+#define PACKETCONFIG_FW_TERM_TX         0x1000
+#define PACKETCONFIG_AUTO_ACK           0x0800
+#define PACKETCONFIG_PKT_FIFO_POLARITY  0x0400
+
+#define R_STATUS            48
+#define STATUS_CRC_BIT      15
+#define PKT_FLAG            6
+#define FIFO_FLAG           5
+#define SYNCW_RECV          7
+
+
+#define R_FIFO              50
+#define R_FIFO_CONTROL      52
+
+
 class LT8900
 {
 

@@ -1,4 +1,4 @@
-klemhe
-lacite6201
-192.168.1.104
-remote00
+ssid
+pass
+mqtt server
+hostname

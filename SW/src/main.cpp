@@ -27,7 +27,7 @@
 
 // Using LT8900 without RST and PKT pins
 const uint8_t PIN_NRF_RST = 0;
-const uint8_t PIN_NRF_CS = D10;
+const uint8_t PIN_NRF_CS = 15;
 const uint8_t PIN_NRF_PKT = 0;
 
 
@@ -187,6 +187,7 @@ uint16_t EEprom_Read2Bytes(int Address)
 
 void ParseRemoteComm(uint8_t buf[])
 {
+  String Topic_Out;
   uint16_t LastRemAdd;
   if (lastCounter != buf[5])
   {
@@ -224,14 +225,14 @@ void ParseRemoteComm(uint8_t buf[])
       // Main ON
       if (actComm == 0x05)
       {
-        client.publish("Remote/Gr0ON","1");
+        client.publish(String(host_name+"/status/Gr0ON").c_str(),"1");
       }
       // Main OFF or All Night mode
       else if (actComm == 0x09)
       {
         if (!rem_key_hold)
         {
-          client.publish("Remote/Gr0ON","0");
+          client.publish(String(host_name+"/status/Gr0ON").c_str(),"0");
         }
         else if (rem_key_hold)
         {
@@ -614,7 +615,6 @@ void loop()
   if (lt.available())
     {
       uint8_t buf[8];
-
       int packetSize = lt.read(buf, 8);
       if (packetSize > 0)
       {

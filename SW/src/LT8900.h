@@ -48,8 +48,8 @@
 
 #define R_STATUS            48
 #define STATUS_CRC_BIT      15
-#define PKT_FLAG            6
-#define FIFO_FLAG           5
+#define STATUS_PKT_FLAG     6
+#define STATUS_FIFO_FLAG    5
 #define SYNCW_RECV          7
 
 

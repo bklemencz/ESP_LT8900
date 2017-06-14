@@ -271,12 +271,15 @@ bool LT8900::available()
   if ((_pin_pktflag>0) && (digitalRead(_pin_pktflag) != 0))
   {
     return true;
-  } else
-  if ((_pin_pktflag==0) && (bitRead(readRegister(R_STATUS),PKT_FLAG)))
-  {
-      return true;
   }
-
+  if (_pin_pktflag==0)
+  {
+    uint16_t value = readRegister(R_STATUS);
+    if (bitRead(value,STATUS_PKT_FLAG))
+    {
+        return true;
+    }
+  }
   return false;
 }
 
@@ -369,9 +372,10 @@ bool LT8900::sendPacket(uint8_t *data, size_t packetSize)
     }
   } else
   {
-    while (bitRead(readRegister(R_STATUS),PKT_FLAG)==0)
+    uint16_t value = readRegister(R_STATUS);
+    while (bitRead(value,STATUS_PKT_FLAG)==0)
     {
-
+      value = readRegister(R_STATUS);
     }
   }
   return true;
@@ -424,9 +428,10 @@ void LT8900::scanRSSI(uint16_t *buffer, uint8_t start_channel, uint8_t num_chann
       }
     } else
     {
-      while (bitRead(readRegister(R_STATUS),PKT_FLAG)==0)
+      uint16_t value = readRegister(R_STATUS);
+      while (bitRead(value,STATUS_PKT_FLAG)==0)
       {
-
+        value = readRegister(R_STATUS);
       }
     }
 

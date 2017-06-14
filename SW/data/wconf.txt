@@ -1,4 +1,0 @@
-ssid
-pass
-mqtt server
-hostname

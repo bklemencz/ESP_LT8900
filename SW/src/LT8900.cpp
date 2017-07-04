@@ -112,6 +112,14 @@ void LT8900::begin()
   writeRegister(R_CHANNEL, 0x30);  // Frequency = 2402 + channel
 }
 
+void LT8900::softReset()
+{
+  uint16_t status = readRegister(R_POWER_MODE);
+  writeRegister(R_POWER_MODE,status | POWER_DOWN_ENABLE);
+  delay(50);
+  writeRegister(R_POWER_MODE,status & POWER_DOWN_DISABLE);
+}
+
 void LT8900::setChannel(uint8_t channel)
 {
   _channel = channel;

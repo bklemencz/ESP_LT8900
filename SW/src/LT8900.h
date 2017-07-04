@@ -46,6 +46,12 @@
 #define PACKETCONFIG_AUTO_ACK           0x0800
 #define PACKETCONFIG_PKT_FIFO_POLARITY  0x0400
 
+#define R_POWER_MODE        35
+#define POWER_DOWN_ENABLE   0x8000
+#define POWER_DOWN_DISABLE  0x7000
+
+
+
 #define R_STATUS            48
 #define STATUS_CRC_BIT      15
 #define STATUS_PKT_FLAG     6
@@ -97,6 +103,8 @@ class LT8900
     void setChannel(uint8_t channel);
     /** Retrieve the current channel */
     uint8_t getChannel();
+
+    void softReset();
 
     /** Set power and gain
     * @param power 0-0xf

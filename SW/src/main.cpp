@@ -20,15 +20,21 @@
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
 #include <ESP8266mDNS.h>
+#include <ESP8266WebServer.h>
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
 #include <EEPROM.h>
 #include <FS.h>
+#include <web.h>
+#include <Wire.h>
+#include <SparkFunMPL3115A2.h>
 
 // Using LT8900 without RST and PKT pins
 const uint8_t PIN_NRF_RST = 0;
 const uint8_t PIN_NRF_CS = 15;
 const uint8_t PIN_NRF_PKT = 0;
+const uint8_t PIN_LED = 2;
+const uint16_t T_BAROMESS = 30000;
 
 
 bool rem_key_hold;
@@ -37,8 +43,14 @@ int lastCounter;
 uint16_t RemContr_Add;
 uint8_t LearnCnt;
 String ssid,password,mqtt_server,host_name;
+String webPage = "";
 
+ESP8266WebServer server(80);
 LT8900 lt(PIN_NRF_CS, PIN_NRF_PKT, PIN_NRF_RST);
+
+MPL3115A2 myPressure;
+unsigned long PrevPressMess;
+
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -47,9 +59,9 @@ void FlashLed(int Number, int Del)
 {
   for (int i=0;i<Number;i++)
   {
-    digitalWrite (BUILTIN_LED,1);
+    digitalWrite (PIN_LED,0);
     delay(Del);
-    digitalWrite (BUILTIN_LED,0);
+    digitalWrite (PIN_LED,1);
     delay(Del);
   }
   pinMode(PIN_NRF_PKT,INPUT);
@@ -66,6 +78,17 @@ void Flash_Light(int Nr, int del)
     client.loop();
     delay(del);
   }
+}
+
+void setup_web()
+{
+
+
+
+  server.on("/", [](){
+    server.send(200, "text/html", INDEX_HTML_HEAD);
+  });
+  server.begin();
 }
 
 void setup_FS(void)
@@ -99,6 +122,34 @@ void callback(char* topic, byte* payload, unsigned int length)
  //  TimeOut = atoi((char*)payload);
  //  Serial.print("New TimeOut: ");
  //  Serial.println(TimeOut);
+}
+
+void setup_baro()
+{
+  myPressure.begin(); // Get sensor online
+
+  // Configure the sensor
+  //myPressure.setModeAltimeter(); // Measure altitude above sea level in meters
+  myPressure.setModeBarometer(); // Measure pressure in Pascals from 20 to 110 kPa
+
+  myPressure.setOversampleRate(7); // Set Oversample to the recommended 128
+  myPressure.enableEventFlags(); // Enable all three pressure and temp event flags
+}
+
+void handle_baro()
+{
+  if ((millis()-PrevPressMess)<0) PrevPressMess = 0;
+  if ((millis()-PrevPressMess)>T_BAROMESS)
+  {
+    PrevPressMess = millis();
+    float pressure = myPressure.readPressure();
+    float temperature = myPressure.readTemp();
+    client.publish(String(host_name+"/status/pressure").c_str(),String(pressure).c_str());
+    client.publish(String(host_name+"/status/temp").c_str(),String(temperature).c_str());
+    Serial.print(pressure,2);Serial.print(" ");
+    Serial.println(temperature,2);
+    client.loop();
+  }
 }
 
 void setup_wifi()
@@ -165,6 +216,7 @@ void setup_spi()
 
 void setup_Lt8900()
 {
+  lt.softReset();
   lt.begin();
   lt.setDataRate(LT8900::LT8900_1MBPS);
   lt.setChannel(0x04);
@@ -579,6 +631,8 @@ void ParseRemoteComm(uint8_t buf[])
 
 void setup()
 {
+  pinMode(PIN_LED, OUTPUT);
+  digitalWrite(PIN_LED, 1);
   Serial.begin(115200);
   setup_FS();
   EEPROM.begin(512);
@@ -590,8 +644,10 @@ void setup()
 
   setup_OTA();
   setup_Lt8900();
-
+  setup_baro();
+  setup_web();
   Serial.println(F("Boot completed."));
+  Serial.print("Using Remote: ");Serial.println(RemContr_Add);
 }
 
 void loop()
@@ -604,6 +660,7 @@ void loop()
        Serial.println("MQTT Online!");
        String Out_Topic = host_name + "/Remote/Online";
        client.publish(Out_Topic.c_str(),"1");
+       lt.softReset();
        lt.begin();
        lt.setChannel(4);
        lt.startListening();
@@ -614,14 +671,23 @@ void loop()
    }
   if (lt.available())
     {
+      Serial.print("Incoming Remote Command");
       uint8_t buf[8];
       int packetSize = lt.read(buf, 8);
+      for(int i=0; i<8;i++)
+      {
+        Serial.print(buf[i]);
+      }
+      Serial.println();
       if (packetSize > 0)
       {
         ParseRemoteComm(buf);
+        FlashLed(2,100);
       }
       lt.startListening();      // LT8900 Rx Enable
     }
+  handle_baro();
   client.loop();                // Update MQTT client
   ArduinoOTA.handle();          // OTA Updates
+  server.handleClient();
 }

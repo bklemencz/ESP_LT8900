@@ -112,6 +112,14 @@ void LT8900::begin()
   writeRegister(R_CHANNEL, 0x30);  // Frequency = 2402 + channel
 }
 
+void LT8900::softReset()
+{
+  uint16_t status = readRegister(R_POWER_MODE);
+  writeRegister(R_POWER_MODE,status | POWER_DOWN_ENABLE);
+  delay(50);
+  writeRegister(R_POWER_MODE,status & POWER_DOWN_DISABLE);
+}
+
 void LT8900::setChannel(uint8_t channel)
 {
   _channel = channel;
@@ -286,11 +294,12 @@ bool LT8900::available()
 int LT8900::read(uint8_t *buffer, size_t maxBuffer)
 {
   uint16_t value = readRegister(R_STATUS);
+  uint16_t data = readRegister(R_FIFO);
   if (bitRead(value, STATUS_CRC_BIT) == 0)
   {
     //CRC ok
 
-    uint16_t data = readRegister(R_FIFO);
+    
     uint8_t packetSize = data >> 8;
     if(maxBuffer < packetSize+1)
     {
@@ -321,10 +330,10 @@ void LT8900::startListening()
 
   if (_pin_pktflag >0) pinMode(_pin_pktflag, INPUT);
   writeRegister(R_CHANNEL, _channel & CHANNEL_MASK);   //turn off rx/tx
-  delay(3);
+  delay(1);
   writeRegister(R_FIFO_CONTROL, 0x0080);  //flush rx
+  delay(1);
   writeRegister(R_CHANNEL,  (_channel & CHANNEL_MASK) | _BV(CHANNEL_RX_BIT));   //enable RX
-  delay(5);
 }
 
 /* set the BRCLK_SEL value */

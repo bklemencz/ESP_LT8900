@@ -69,3 +69,6 @@ $RECYCLE.BIN/
 
 # Windows shortcuts
 *.lnk
+SW/.clang_complete
+SW/.clang_complete
+SW/.gcc-flags.json

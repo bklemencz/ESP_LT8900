@@ -20,39 +20,54 @@
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
 #include <ESP8266mDNS.h>
+#include <ESP8266WebServer.h>
 #include <WiFiUdp.h>
-#include <ArduinoOTA.h>
+//#include <ArduinoOTA.h>
 #include <EEPROM.h>
 #include <FS.h>
+#include <web.h>
+#include <Wire.h>
+#include "ArduinoJson.h"
+
+#define TX_REPEAT_COUNT 10
 
 // Using LT8900 without RST and PKT pins
 const uint8_t PIN_NRF_RST = 0;
 const uint8_t PIN_NRF_CS = 15;
 const uint8_t PIN_NRF_PKT = 0;
+const uint8_t PIN_LED = 2;
+const uint16_t T_BAROMESS = 30000;
 
 
 bool rem_key_hold;
 uint8_t rem_group_act;
 int lastCounter;
 uint16_t RemContr_Add;
-uint8_t LearnCnt;
+uint8_t LearnCnt,CommandSeq;
 String ssid,password,mqtt_server,host_name;
+String webPage = "";
 
+ESP8266WebServer server(80);
 LT8900 lt(PIN_NRF_CS, PIN_NRF_PKT, PIN_NRF_RST);
+
+//MPL3115A2 myPressure;
+unsigned long PrevPressMess;
+
 
 WiFiClient espClient;
 PubSubClient client(espClient);
+StaticJsonDocument<200> doc;
 
 void FlashLed(int Number, int Del)
 {
   for (int i=0;i<Number;i++)
   {
-    digitalWrite (BUILTIN_LED,1);
+    digitalWrite (PIN_LED,0);
     delay(Del);
-    digitalWrite (BUILTIN_LED,0);
+    digitalWrite (PIN_LED,1);
     delay(Del);
   }
-  pinMode(PIN_NRF_PKT,INPUT);
+  //pinMode(PIN_NRF_PKT,INPUT);
 }
 
 void Flash_Light(int Nr, int del)
@@ -66,6 +81,17 @@ void Flash_Light(int Nr, int del)
     client.loop();
     delay(del);
   }
+}
+
+void setup_web()
+{
+
+
+
+  server.on("/", [](){
+    server.send(200, "text/html", INDEX_HTML_HEAD);
+  });
+  server.begin();
 }
 
 void setup_FS(void)
@@ -86,6 +112,8 @@ void setup_FS(void)
   password.remove((password.length()-1));
   mqtt_server.remove((mqtt_server.length()-1));
   host_name.remove((host_name.length()-1));
+  host_name = "Remote";
+  Serial.println(host_name);
 
   /////////// NEED TO RUN ONLY ONCE ///////////
   //  Serial.println("Spiffs formating...");
@@ -95,10 +123,30 @@ void setup_FS(void)
 
 void callback(char* topic, byte* payload, unsigned int length)
 {
+ bool res;
  // FlashLed(2, 500);
  //  TimeOut = atoi((char*)payload);
  //  Serial.print("New TimeOut: ");
  //  Serial.println(TimeOut);
+  if (strcmp(topic,"Remote/Raw")==0)
+  { 
+    Serial.println("Callback");
+    Serial.print(length); Serial.print("Bytes ");
+    payload[1] = CommandSeq;
+    for (uint8_t i=0;i<length;i++) {Serial.print(payload[i]); Serial.print("  "); }
+    Serial.println();
+    for (uint8_t i=0; i<TX_REPEAT_COUNT;i++)
+    {
+      res = lt.sendPacket(payload,length);
+      delay(1);
+    }
+    if (res) 
+    {
+      Serial.print("Sent ");
+      Serial.print(TX_REPEAT_COUNT); Serial.println(" Times.");
+    } 
+    CommandSeq++;
+  }
 }
 
 void setup_wifi()
@@ -113,12 +161,11 @@ void setup_wifi()
   Serial.println("Wifi Connected!");
   delay(1000);
   client.setServer(mqtt_server.c_str(), 1883);
-  client.setCallback(callback);
-
+  
 
 }
 
-void setup_OTA()
+/*void setup_OTA()
 {
   ArduinoOTA.onStart([]() {
       String type;
@@ -154,6 +201,7 @@ void setup_OTA()
     Serial.println(WiFi.localIP());
     Serial.println(ArduinoOTA.getHostname());
 }
+*/
 
 void setup_spi()
 {
@@ -165,9 +213,10 @@ void setup_spi()
 
 void setup_Lt8900()
 {
+  lt.softReset();
   lt.begin();
   lt.setDataRate(LT8900::LT8900_1MBPS);
-  lt.setChannel(0x04);
+  lt.setChannel(74);
   lt.startListening();
   //lt.whatsUp(Serial);
 }
@@ -185,7 +234,7 @@ uint16_t EEprom_Read2Bytes(int Address)
 }
 
 
-void ParseRemoteComm(uint8_t buf[])
+/* void ParseRemoteComm(uint8_t buf[])
 {
   String Topic_Out;
   uint16_t LastRemAdd;
@@ -576,9 +625,29 @@ void ParseRemoteComm(uint8_t buf[])
     }
   }
 }
+ */
+
+void Publish_Remote(uint8_t buf[])
+{
+  char outbuffer[256];
+  if (buf[0] != 90)
+    return;
+  if (lastCounter == buf[5])
+    return;
+  if (lastCounter != buf[5])
+    lastCounter = buf[5];
+  doc["ID"] = buf[1] * 256 + buf[2];
+  doc["GROUP"] = buf[3];
+  doc["HOLD"] = buf[4] & 0x10;
+  doc["COMM"] = buf[4] % 16;
+  size_t n = serializeJson(doc, outbuffer);
+  client.publish("Remote/CommandRec", outbuffer, n);
+}
 
 void setup()
 {
+  pinMode(PIN_LED, OUTPUT);
+  digitalWrite(PIN_LED, 1);
   Serial.begin(115200);
   setup_FS();
   EEPROM.begin(512);
@@ -588,40 +657,65 @@ void setup()
   setup_wifi();
   delay(500);
 
-  setup_OTA();
+  //setup_OTA();
   setup_Lt8900();
-
-  Serial.println(F("Boot completed."));
+  //setup_baro();
+  setup_web();
+  Serial.println("Boot completed.");
+  Serial.print("Using Remote: ");Serial.println(RemContr_Add);
 }
 
 void loop()
 {
+   if (WiFi.status() != WL_CONNECTED) ESP.reset();
    while (!client.connected())
    {
-     if (client.connect(host_name.c_str()))
+     if (client.connect(host_name.c_str(),"Remote/Status/Online",0,false,"0"))
      {
        FlashLed(5, 100);
        Serial.println("MQTT Online!");
-       String Out_Topic = host_name + "/Remote/Online";
-       client.publish(Out_Topic.c_str(),"1");
+       String Out_Topic = "Remote/Status/Online";
+       client.publish(Out_Topic.c_str(),"1",true);
+       client.setCallback(callback);
+       client.subscribe("Remote/Raw");
+
+       lt.softReset();
        lt.begin();
-       lt.setChannel(4);
+       lt.setChannel(74);
        lt.startListening();
      } else
      {
        delay(1000);
      }
    }
-  if (lt.available())
-    {
-      uint8_t buf[8];
-      int packetSize = lt.read(buf, 8);
-      if (packetSize > 0)
-      {
-        ParseRemoteComm(buf);
-      }
-      lt.startListening();      // LT8900 Rx Enable
-    }
+   if (lt.available())
+   {
+     //Serial.print("Incoming Remote Command");
+     uint8_t buf[20];
+     int packetSize = lt.read(buf, 20);
+     
+     if (packetSize > 0)
+     {
+       
+       /* Serial.print(packetSize);
+       Serial.print("   ");
+       for (int i = 0; i < packetSize; i++)
+       {
+
+         Serial.print(buf[i]);
+       } 
+       Serial.println(); */
+       if (buf[0]!=90) client.publish("Remote/RawIn",buf,packetSize);
+       Publish_Remote(buf);
+     }
+     /*else
+       {
+         Serial.print("Error! "); 
+         Serial.println(packetSize);
+         
+       }*/
+       lt.startListening(); // LT8900 Rx Enable
+   }
   client.loop();                // Update MQTT client
-  ArduinoOTA.handle();          // OTA Updates
+  //server.handleClient();
 }

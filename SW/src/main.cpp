@@ -149,6 +149,34 @@ void callback(char* topic, byte* payload, unsigned int length)
   }
 }
 
+void setup_baro()
+{
+  myPressure.begin(); // Get sensor online
+
+  // Configure the sensor
+  //myPressure.setModeAltimeter(); // Measure altitude above sea level in meters
+  myPressure.setModeBarometer(); // Measure pressure in Pascals from 20 to 110 kPa
+
+  myPressure.setOversampleRate(7); // Set Oversample to the recommended 128
+  myPressure.enableEventFlags(); // Enable all three pressure and temp event flags
+}
+
+void handle_baro()
+{
+  if ((millis()-PrevPressMess)<0) PrevPressMess = 0;
+  if ((millis()-PrevPressMess)>T_BAROMESS)
+  {
+    PrevPressMess = millis();
+    float pressure = myPressure.readPressure();
+    float temperature = myPressure.readTemp();
+    client.publish(String(host_name+"/status/pressure").c_str(),String(pressure).c_str());
+    client.publish(String(host_name+"/status/temp").c_str(),String(temperature).c_str());
+    Serial.print(pressure,2);Serial.print(" ");
+    Serial.println(temperature,2);
+    client.loop();
+  }
+}
+
 void setup_wifi()
 {
   WiFi.softAPdisconnect(true);

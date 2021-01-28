@@ -5,7 +5,7 @@
 
  GND        GND
  3v3        VCC
- D0         PKT
+ #D0         PKT
  D8         CS
  D4         RST
  D7         MOSI
